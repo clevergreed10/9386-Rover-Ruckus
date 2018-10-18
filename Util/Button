@@ -1,0 +1,28 @@
+package org.firstinspires.ftc.teamcode;
+
+public class Button {
+    
+    boolean down = false;
+    boolean toggle = false;
+    
+    // Constructor
+    public Button() {
+        
+    }
+    
+    
+    // call this every teleop loop with
+    // example: aButton.update(gamepad1.a)
+    public void update(boolean isDown) { 
+        // do logic to calculate toggle and other stuff
+        
+    }
+    
+    public boolean isDown() { // to determine if a butt
+        return this.down;
+    }
+    
+    public boolean isToggle() {
+        return this.toggle;
+    }
+}
