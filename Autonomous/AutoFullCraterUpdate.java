@@ -38,6 +38,7 @@ public class AutoFullCraterUpdate extends LinearOpMode {
     private GoldDetector detector = new GoldDetector();
     private int goldSide = 1; //-1 = NONE, 0 = LEFT, 1 = CENTER, 2 = RIGHT
 
+
     @Override
     public void runOpMode() {
         //initialize
@@ -79,16 +80,23 @@ public class AutoFullCraterUpdate extends LinearOpMode {
         gyroHold(2.5);
         bot.armMotor2.setPower(0);
 
-        gyroHold(4.0);
+        gyroHold(2.0);
 
-        gyroDrive(0, 0.5, 2, 1.0);
+        gyroStrafe(0.5, 1, 6, 2.0);
+
+        gyroDrive(0, 0.5, 5, 2.0);
+
+        gyroHold(.5);
+
+        gyroStrafe(0.5, 1, 4, 2.0);
 
         bot.armMotor2.setPower(-1);
         gyroHold(2.5);
         bot.armMotor2.setPower(0);
 
         // - - - FIND GOLD POS - - -
-        gyroHold(5.0);
+        gyroHold(3.0);
+
         int goldSide = getGoldSide();
 
         detector.disable();
@@ -101,18 +109,21 @@ public class AutoFullCraterUpdate extends LinearOpMode {
 
 
         // - - - SAMPLE GOLD - - -
+        gyroStrafe(0.5, 0, 6, 2.0);
+
         if (goldSide == 0) {
-            gyroDrive(30, 0.5, 20, 3.0);
+            gyroDrive(45, 0.5, 20, 3.0);
             gyroHold(0.5);
             gyroDrive(30, -0.5, 12, 3.0);
         } else if (goldSide == 1) {
+            //gyroStrafe(0.5, 0, 6, 2.0);
             gyroDrive(0, 0.5, 12, 3.0);
             gyroHold(0.5);
             gyroDrive(0, -0.5, 6, 3.0);
         } else if (goldSide == 2) {
-            gyroDrive(-30, 0.5, 18, 3.0);
+            gyroDrive(-15, 0.5, 18, 3.0);
             gyroHold(0.5);
-            gyroDrive(-30, -0.5, 8 , 3.0);
+            gyroDrive(-30 , -0.5, 8 , 3.0);
         }
 
        // - - - NAVIGATE TO DEPOT - - -
@@ -122,106 +133,13 @@ public class AutoFullCraterUpdate extends LinearOpMode {
         gyroDrive(90, 0.5, 36, 4.0);
 
         gyroHold(0.5);
-        // lower from lander
-        ////Release claw lock
-        //bot.liftLockServo.setPosition(bot.LIFT_LOCK_OPEN);
 
-        ////Extend lander claw
-        //gyroHold(4);
-        //bot.liftMotor.setPower(0.5);
-        //gyroHold(3);
-        //bot.liftMotor.setPower(0.0);
+        gyroDrive(135, 0.5, 12, 3.0);
 
-        ////Turn 15* clockwise (right)
-        //bot.wheel2.setPower(-0.5);
-        //gyroHold(1);
-        //bot.wheel2.setPower(0.0);
+        gyroHold(.5);
 
-        ////Retract lander lift
-        //bot.liftMotor.setPower(-0.5);
-        //gyroHold(3);
-        //bot.liftMotor.setPower(0.0);
+        gyroStrafe(0.5, 1, 6, 2.0);
 
-/*
-        // read minerals
-        gyroDrive(0, -0.5, 6, 2.0);
-        gyroHold(5);
-
-        if (detector.isFound()) {
-            double goldPos = detector.getXPosition();
-
-            if (goldPos < 200) { // 0 is left, 2 is right, 1 is center
-                goldSide = 0;
-            } else if (goldPos > 450) {
-                goldSide = 2;
-            } else {
-                goldSide = 1;
-            }
-            telemetry.addData("Side", goldSide);
-            telemetry.addData("Pos", goldPos);
-            telemetry.update();
-            gyroHold(5);
-        }
-
-        // push off correct mineral, back up
-        if (goldSide == 0) { // left
-            gyroDrive(-35, 0.5, 48, 5.0);
-
-            gyroHold(0.5);
-
-            gyroDrive(-35, 0.5, 24, 3.0);
-
-            gyroHold(0.5);
-
-            gyroDrive(-35, -0.5, 12, 3.0);
-        } else if (goldSide == 2) { // right
-            gyroDrive(45, 0.5, 48, 5.0);
-
-            gyroHold(0.5);
-
-            gyroDrive(35, 0.5, 24, 5.0);
-
-            gyroDrive(35, -0.5, 12, 3.0);
-        } else {
-            gyroDrive(0, 0.5, 24, 5.0);
-
-            gyroHold(0.5);
-
-            gyroDrive(0, -0.5, 12, 3.0);
-        }
-
-        gyroHold(1);
-
-        gyroDrive(0, 0.5, 24, 5.0);
-
-        // turn to wall
-        /*gyroHold(1);
-
-        gyroDrive(90, 0.5, 36, 5.0);
-
-        gyroHold(0.5);
-
-        gyroDrive(90, -1, 24, 3.0);
-
-        // drive to depot
-        gyroDrive(135, -0.5, 36, 5.0);
-
-        gyroHold(0.5);
-
-        gyroDrive(135, -0.75, 36, 5.0);
-        // push off second mineral
-
-        // score team marker
-
-        // navigate to crater
-
-        measureGyroAccuracy(5.0);
-        telemetry.addLine("Done measuring. Drive time!");
-        gyroDrive(0, 0.5, 12, 3);
-        telemetry.addLine("Turning.");
-        gyroDrive(90, 0.5, 12, 3.0);*/
-
-        detector.disable();
     }
 
     private void measureGyroAccuracy(double timeout) {
@@ -508,12 +426,12 @@ public class AutoFullCraterUpdate extends LinearOpMode {
         if (detector.getScreenPosition().x > 0 && detector.getScreenPosition().y > 300) {
             double pos = detector.getXPosition();
             if (pos <= 340) {
-                return 0; // left
-            } else {
                 return 1; // center
+            } else {
+                return 2; // right
             }
         } else {
-            return 2; // right/not found
+            return 0; // LEFT/not found
         }
     }
 
