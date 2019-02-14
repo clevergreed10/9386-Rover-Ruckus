@@ -16,6 +16,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.teamcode.Drivetrain.MecanumDrivetrain;
 import org.firstinspires.ftc.teamcode.EEBotHardware;
 import org.firstinspires.ftc.teamcode.PIDControl.PController;
+import org.firstinspires.ftc.teamcode.PIDControl.PDController;
 import org.firstinspires.ftc.teamcode.PIDControl.PIDController;
 
 @Autonomous(name="Auto: Crater Jr")
@@ -33,9 +34,14 @@ public class AutoCraterJr extends LinearOpMode {
     double TURN_SPEED          = 0.5;
     double HOLD_TIME           = 0.25;
 
-    public double DRIVE_kP = 1.0/20;
-    public double DRIVE_kI = 1.0/40;
-    public double DRIVE_kD = 1.0/15;
+    public double DRIVE_kP = 1.0/20; // increase this number to increase responsiveness. decrease this number to decrease oscillation
+    public double DRIVE_kI = 1.0/40; // increase this number to decrease steady state error (controller stops despite error not equalling 0)
+    public double DRIVE_kD = 1.0/15; // increase this number to increase the "slowdown" as error grows smaller
+
+
+    private double TURN_kP = 0.05;  // increase this number to increase responsiveness. decrease this number to decrease oscillation
+    private double TURN_kI = 0.01;  // increase this number to decrease steady state error (controller stops despite error not equalling 0)
+    private double TURN_kD = 0.025; // increase this number to increase the "slowdown" as error grows smaller
 
     private DcMotor wheel1;
     private DcMotor wheel2;
@@ -92,7 +98,7 @@ public class AutoCraterJr extends LinearOpMode {
 
         telemetry.addData("gyroHeading: ", bot.imu.getAngularOrientation(AxesReference.EXTRINSIC, AxesOrder.XYZ, AngleUnit.DEGREES));
         telemetry.update();
-       // gyroHold(0.5);
+        // gyroHold(0.5);
 
         gyroDrive(0, 0.2, 0.45, 1.0);
         telemetry.addData("Drive 1: ", "Completed");
@@ -179,7 +185,7 @@ public class AutoCraterJr extends LinearOpMode {
             //gyroDrive(-45 , -0.5, 10, 2.0);
         }
 
-               // - - - PARK IN CRATER - - -
+        // - - - PARK IN CRATER - - -
         //gyroDrive(135, -DRIVE_SPEED, 30, 5.0);
     }
 
@@ -226,7 +232,7 @@ public class AutoCraterJr extends LinearOpMode {
 
         telemetry.addData("AVG TIME:", averageIterationTime);
         telemetry.update();
-        }
+    }
 
     /**
      * TODO: Think about clipping the correction rather than final power
@@ -279,7 +285,8 @@ public class AutoCraterJr extends LinearOpMode {
             //telemetry.addData("distance", distance);
             //telemetry.addData("Current angle:", orientation.thirdAngle);
             telemetry.update();
-            wheel1.setPower(rightPower);            wheel4.setPower(rightPower);
+            wheel1.setPower(rightPower);
+            wheel4.setPower(rightPower);
             wheel2.setPower(leftPower);
             wheel3.setPower(leftPower);
         }
@@ -289,11 +296,17 @@ public class AutoCraterJr extends LinearOpMode {
         wheel2.setPower(0);
         wheel3.setPower(0);
     }
+    
+    // maxSpeed should be between 0 and 1, everything else is the same.
+    private void gyroTurn(double targetAngle, double maxSpeed, double distance, double timeout) {
+        maxSpeed = Math.abs(maxSpeed); // make sure speed is positive
+        
+        // Ethan: if you're getting odd values from this controller, switch the below line to: PController controller = new PController(TURN_kP); 
+        // Read the notes next to TURN_kP if you're still having trouble
+        PDController controller = new PDController(TURN_kP, TURN_kD); 
+        controller.setOutputClip(1.0);
 
-    private void gyroTurn(double targetAngle, double desiredPower, double distance, double timeout) {
-        //PController controller = new PController(DRIVE_kP);
-
-        //distance = distance * TICKS_PER_INCH;
+        distance = distance * TICKS_PER_INCH;
 
         wheel1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         wheel2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -304,27 +317,43 @@ public class AutoCraterJr extends LinearOpMode {
         double leftStart = bot.wheel2.getCurrentPosition(); // top left
 
         double startTime = time;
-
+        
         Orientation orientation = bot.imu.getAngularOrientation(AxesReference.EXTRINSIC, AxesOrder.XYZ, AngleUnit.DEGREES);
         double angle = orientation.thirdAngle;
 
-        while (opModeIsActive() && angle != targetAngle) {
+        while (Math.abs(wheel1.getCurrentPosition() - rightStart) < distance 
+                && Math.abs(wheel2.getCurrentPosition() - leftStart) < distance 
+                && angle != targetAngle
+                && opModeIsActive()) {
+            
             if (time > startTime + timeout) { // timeout
                 telemetry.addLine("Drive loop timeout.");
                 break;
             }
 
+            orientation = bot.imu.getAngularOrientation(AxesReference.EXTRINSIC, AxesOrder.XYZ, AngleUnit.DEGREES);
+            angle = orientation.thirdAngle;
+            double error = targetAngle - angle;
+            double correction = controller.calculate(error); //controller.calculate(error);
+            double rightPower = correction * maxSpeed;
+            double leftPower  = -correction * maxSpeed;
 
+            double max = Math.max(Math.abs(rightPower), Math.abs(leftPower));
+            if (max > 1) { // clip the power between -1,1 while retaining relative speed percentage
+                rightPower = rightPower / max;
+                leftPower = leftPower / max;
+            }
 
-            //telemetry.addData("kP", controller.getkP());
-            //telemetry.addData("rightEncoder", bot.wheel1.getCurrentPosition());
-            //telemetry.addData("distance", distance);
-            //telemetry.addData("Current angle:", orientation.thirdAngle);
+            telemetry.addData("error", error);
+            telemetry.addData("correction", correction);
+            telemetry.addData("rightPower", rightPower);
+            telemetry.addData("leftPower", leftPower);
             telemetry.update();
-            wheel1.setPower(-desiredPower);
-            wheel4.setPower(-desiredPower);
-            wheel2.setPower(desiredPower);
-            wheel3.setPower(desiredPower);
+            
+            wheel1.setPower(rightPower);
+            wheel4.setPower(rightPower);
+            wheel2.setPower(leftPower);
+            wheel3.setPower(leftPower);
         }
 
         wheel1.setPower(0);
