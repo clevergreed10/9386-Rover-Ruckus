@@ -2,8 +2,10 @@ package org.firstinspires.ftc.teamcode.AutoPrograms;
 
 
 import com.disnodeteam.dogecv.CameraViewDisplay;
+import com.disnodeteam.dogecv.DogeCV;
 import com.disnodeteam.dogecv.detectors.roverrukus.GoldDetector;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.Range;
@@ -18,7 +20,7 @@ import org.firstinspires.ftc.teamcode.PIDControl.PController;
 import org.firstinspires.ftc.teamcode.PIDControl.PIDController;
 
 @Autonomous(name="Auto: Crater Edit")
-
+@Disabled
 public class AutoCraterEdited extends LinearOpMode {
     EEBotHardware bot = new EEBotHardware();
 
@@ -59,7 +61,7 @@ public class AutoCraterEdited extends LinearOpMode {
         bot.init(hardwareMap);
 
         //detector.init(hardwareMap.appContext, CameraViewDisplay.getInstance());
-        detector.init(hardwareMap.appContext, CameraViewDisplay.getInstance(), 1, false);
+        detector.init(hardwareMap.appContext, CameraViewDisplay.getInstance(), DogeCV.CameraMode.FRONT, false);
 
         wheel1 = bot.wheel1;
         wheel2 = bot.wheel2;

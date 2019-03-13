@@ -88,6 +88,7 @@ public class EEBotHardware
     ////public TouchSensor touch = null;
 
     public Servo pusher = null;
+    public Servo stopper = null;
 
     //public TouchSensor touch  = null;
 
@@ -178,6 +179,8 @@ public class EEBotHardware
         // Define and initialize ALL installed servos.
 
         pusher = hwMap.get(Servo.class, "pusher ");
+
+        stopper = hwMap.get(Servo.class, "stopper ");
 
         ////touch = hwMap.get(TouchSensor.class, "touch");
         //liftLockServo = hwMap.get(Servo.class, "liftLockServo");

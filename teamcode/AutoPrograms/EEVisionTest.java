@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.AutoPrograms;
 
 
 import com.disnodeteam.dogecv.CameraViewDisplay;
+import com.disnodeteam.dogecv.DogeCV;
 import com.disnodeteam.dogecv.detectors.roverrukus.GoldAlignDetector;
 import com.disnodeteam.dogecv.detectors.roverrukus.GoldDetector;
 import com.disnodeteam.dogecv.detectors.roverrukus.GoldDetectorModified;
@@ -46,7 +47,7 @@ public class EEVisionTest extends LinearOpMode {
         bot.init(hardwareMap);
 
         //detector.init(hardwareMap.appContext, CameraViewDisplay.getInstance());
-        detector.init(hardwareMap.appContext, CameraViewDisplay.getInstance(), 1, false);
+        detector.init(hardwareMap.appContext, CameraViewDisplay.getInstance(), DogeCV.CameraMode.FRONT, false);
 
         wheel1 = bot.wheel1;
         wheel2 = bot.wheel2;
