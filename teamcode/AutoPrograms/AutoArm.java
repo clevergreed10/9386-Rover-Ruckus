@@ -3,10 +3,8 @@ package org.firstinspires.ftc.teamcode.AutoPrograms;
 
 import com.disnodeteam.dogecv.CameraViewDisplay;
 import com.disnodeteam.dogecv.DogeCV;
-import com.disnodeteam.dogecv.detectors.roverrukus.GoldAlignDetector;
-import com.disnodeteam.dogecv.detectors.roverrukus.GoldDetectorModified;
+import com.disnodeteam.dogecv.detectors.roverrukus.GoldDetector;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.Range;
@@ -20,26 +18,37 @@ import org.firstinspires.ftc.teamcode.EEBotHardware;
 import org.firstinspires.ftc.teamcode.PIDControl.PController;
 import org.firstinspires.ftc.teamcode.PIDControl.PIDController;
 
-@Autonomous(name="Auto: Full-Crater")
-@Disabled
-public class FullCraterOld extends LinearOpMode {
+@Autonomous(name="Auto: Arm")
+
+public class AutoArm extends LinearOpMode {
     EEBotHardware bot = new EEBotHardware();
 
     double WHEEL_CIRCUMFERENCE = 4 * Math.PI;
     double TICKS_PER_ROTATION  = bot.HD_HEX_TPR;
     double TICKS_PER_INCH      = TICKS_PER_ROTATION/WHEEL_CIRCUMFERENCE;
 
+    double LIFT_EXTENSION_TIME = 2.2;
+    double DRIVE_SPEED         = 1.0;
+    double STRAFE_SPEED        = 0.5;
+    double TURN_SPEED          = 0.5;
+    double HOLD_TIME           = 0.25;
+
     public double DRIVE_kP = 1.0/20;
     public double DRIVE_kI = 1.0/40;
     public double DRIVE_kD = 1.0/15;
+
+    private double TURN_kP = 0.05;  // increase this number to increase responsiveness. decrease this number to decrease oscillation
+    private double TURN_kI = 0.01;  // increase this number to decrease steady state error (controller stops despite error not equalling 0)
+    private double TURN_kD = 0.025; // increase this number to increase the "slowdown" as error grows smaller
 
     private DcMotor wheel1;
     private DcMotor wheel2;
     private DcMotor wheel3;
     private DcMotor wheel4;
 
-    private GoldDetectorModified detector = new GoldDetectorModified();
+    private GoldDetector detector = new GoldDetector();
     private int goldSide = 1; //-1 = NONE, 0 = LEFT, 1 = CENTER, 2 = RIGHT
+
 
     @Override
     public void runOpMode() {
@@ -72,148 +81,12 @@ public class FullCraterOld extends LinearOpMode {
 
         waitForStart();
 
-        detector.enable();
-        //run commands
-        telemetry.addLine("OpMode is Active");
-        telemetry.update();
-
-        // - - - LOWER FROM LANDER - - -
-
-        // - - - FIND GOLD POS - - -
-        gyroHold(5.0);
-        int goldSide = getGoldSide();
-
-        detector.disable();
-        gyroDirectionalDrive(0, 1, 12, false, 3.0);
-        gyroDirectionalDrive(90, 1, 12, false, 4.0);
+        bot.winch.setPower(-1);
+        bot.armMotor.setPower(1);
         gyroHold(1.0);
-        gyroDirectionalDrive(-90, 1, 12, false, 4.0);
-        gyroDrive(0, -0.5, 2, 3.0);
-        gyroHold(0.5);
-
-
-        // - - - SAMPLE GOLD - - -
-        if (goldSide == 0) {
-            gyroDrive(30, 0.5, 20, 3.0);
-            gyroHold(0.5);
-            gyroDrive(30, -0.5, 12, 3.0);
-        } else if (goldSide == 1) {
-            gyroDrive(0, 0.5, 12, 3.0);
-            gyroHold(0.5);
-            gyroDrive(0, -0.5, 6, 3.0);
-        } else if (goldSide == 2) {
-            gyroDrive(-30, 0.5, 18, 3.0);
-            gyroHold(0.5);
-            gyroDrive(-30, -0.5, 8 , 3.0);
-        }
-
-       // - - - NAVIGATE TO DEPOT - - -
-
-        gyroHold(0.5);
-
-        gyroDrive(90, 0.5, 36, 4.0);
-
-        gyroHold(0.5);
-        // lower from lander
-        ////Release claw lock
-        //bot.liftLockServo.setPosition(bot.LIFT_LOCK_OPEN);
-
-        ////Extend lander claw
-        //gyroHold(4);
-        //bot.liftMotor.setPower(0.5);
-        //gyroHold(3);
-        //bot.liftMotor.setPower(0.0);
-
-        ////Turn 15* clockwise (right)
-        //bot.wheel2.setPower(-0.5);
-        //gyroHold(1);
-        //bot.wheel2.setPower(0.0);
-
-        ////Retract lander lift
-        //bot.liftMotor.setPower(-0.5);
-        //gyroHold(3);
-        //bot.liftMotor.setPower(0.0);
-
-/*
-        // read minerals
-        gyroDrive(0, -0.5, 6, 2.0);
-        gyroHold(5);
-
-        if (detector.isFound()) {
-            double goldPos = detector.getXPosition();
-
-            if (goldPos < 200) { // 0 is left, 2 is right, 1 is center
-                goldSide = 0;
-            } else if (goldPos > 450) {
-                goldSide = 2;
-            } else {
-                goldSide = 1;
-            }
-            telemetry.addData("Side", goldSide);
-            telemetry.addData("Pos", goldPos);
-            telemetry.update();
-            gyroHold(5);
-        }
-
-        // push off correct mineral, back up
-        if (goldSide == 0) { // left
-            gyroDrive(-35, 0.5, 48, 5.0);
-
-            gyroHold(0.5);
-
-            gyroDrive(-35, 0.5, 24, 3.0);
-
-            gyroHold(0.5);
-
-            gyroDrive(-35, -0.5, 12, 3.0);
-        } else if (goldSide == 2) { // right
-            gyroDrive(45, 0.5, 48, 5.0);
-
-            gyroHold(0.5);
-
-            gyroDrive(35, 0.5, 24, 5.0);
-
-            gyroDrive(35, -0.5, 12, 3.0);
-        } else {
-            gyroDrive(0, 0.5, 24, 5.0);
-
-            gyroHold(0.5);
-
-            gyroDrive(0, -0.5, 12, 3.0);
-        }
-
-        gyroHold(1);
-
-        gyroDrive(0, 0.5, 24, 5.0);
-
-        // turn to wall
-        /*gyroHold(1);
-
-        gyroDrive(90, 0.5, 36, 5.0);
-
-        gyroHold(0.5);
-
-        gyroDrive(90, -1, 24, 3.0);
-
-        // drive to depot
-        gyroDrive(135, -0.5, 36, 5.0);
-
-        gyroHold(0.5);
-
-        gyroDrive(135, -0.75, 36, 5.0);
-        // push off second mineral
-
-        // score team marker
-
-        // navigate to crater
-
-        measureGyroAccuracy(5.0);
-        telemetry.addLine("Done measuring. Drive time!");
-        gyroDrive(0, 0.5, 12, 3);
-        telemetry.addLine("Turning.");
-        gyroDrive(90, 0.5, 12, 3.0);*/
-
-        detector.disable();
+        bot.winch.setPower(0);
+        gyroHold(2.1);
+        bot.armMotor.setPower(0);
     }
 
     private void measureGyroAccuracy(double timeout) {
@@ -259,7 +132,7 @@ public class FullCraterOld extends LinearOpMode {
 
         telemetry.addData("AVG TIME:", averageIterationTime);
         telemetry.update();
-    }
+        }
 
     /**
      * TODO: Think about clipping the correction rather than final power
@@ -284,10 +157,204 @@ public class FullCraterOld extends LinearOpMode {
 
         double startTime = time;
 
+        double error;
+
         while (opModeIsActive() && Math.abs(wheel1.getCurrentPosition() - rightStart) < distance && Math.abs(wheel2.getCurrentPosition() - leftStart) < distance) {
             if (time > startTime + timeout) { // timeout
                 telemetry.addLine("Drive loop timeout.");
                 break;
+            }
+
+            Orientation orientation = bot.imu.getAngularOrientation(AxesReference.EXTRINSIC, AxesOrder.XYZ, AngleUnit.DEGREES);
+            double angle = orientation.thirdAngle;
+            error = targetAngle - angle;
+            if (targetAngle - angle > 180) {
+                error = targetAngle - (angle + 360);
+            } else if (targetAngle - angle < -180) {
+                error = targetAngle - (angle - 360);
+            } else {
+                error = targetAngle - angle;
+            }
+            /*if (targetAngle > 90 && angle < -90) {
+                error = targetAngle - (angle + 360);
+            } else {
+                error = targetAngle - angle;
+            }*/
+            double correction = controller.calculate(error); //controller.calculate(error);
+            double rightPower = desiredPower + correction;
+            double leftPower  = desiredPower - correction;
+
+            double max = Math.max(Math.abs(rightPower), Math.abs(leftPower));
+            if (max > 1) { // clip the power between -1,1 while retaining relative speed percentage
+                rightPower = rightPower / max;
+                leftPower = leftPower / max;
+            }
+
+            telemetry.addData("error", error);
+            telemetry.addData("correction", correction);
+            telemetry.addData("rightPower", rightPower);
+            telemetry.addData("leftPower", leftPower);
+            //telemetry.addData("kP", controller.getkP());
+            //telemetry.addData("rightEncoder", bot.wheel1.getCurrentPosition());
+            //telemetry.addData("distance", distance);
+            //telemetry.addData("Current angle:", orientation.thirdAngle);
+            telemetry.update();
+            wheel1.setPower(rightPower);            wheel4.setPower(rightPower);
+            wheel2.setPower(leftPower);
+            wheel3.setPower(leftPower);
+        }
+
+        wheel1.setPower(0);
+        wheel4.setPower(0);
+        wheel2.setPower(0);
+        wheel3.setPower(0);
+    }
+
+    // maxSpeed should be between 0 and 1, everything else is the same.
+    private void gyroTurn(double targetAngle, double maxSpeed, double distance, double timeout) {
+        maxSpeed = Math.abs(maxSpeed); // make sure speed is positive
+
+        // Ethan: if you're getting odd values from this controller, switch the below line to: PController controller = new PController(TURN_kP);
+        // Read the notes next to TURN_kP if you're still having trouble
+        PIDController controller = new PIDController(TURN_kP, TURN_kI, TURN_kD);
+        controller.setOutputClip(1.0);
+
+        distance = distance * TICKS_PER_INCH;
+
+        wheel1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        wheel2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        wheel3.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        wheel4.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        double rightStart = bot.wheel1.getCurrentPosition(); // top right
+        double leftStart = bot.wheel2.getCurrentPosition(); // top left
+
+        double startTime = time;
+
+        Orientation orientation = bot.imu.getAngularOrientation(AxesReference.EXTRINSIC, AxesOrder.XYZ, AngleUnit.DEGREES);
+        double angle = orientation.thirdAngle;
+        double lastAngle = angle;
+        double error;
+
+        while (Math.abs(wheel1.getCurrentPosition() - rightStart) < distance
+                && Math.abs(wheel2.getCurrentPosition() - leftStart) < distance
+                && angle != targetAngle
+                && opModeIsActive()) {
+
+            if (time > startTime + timeout) { // timeout
+                telemetry.addLine("Drive loop timeout.");
+                break;
+            }
+
+            orientation = bot.imu.getAngularOrientation(AxesReference.EXTRINSIC, AxesOrder.XYZ, AngleUnit.DEGREES);
+            angle = orientation.thirdAngle;
+            if (targetAngle - angle > 180) {
+                error = targetAngle - (angle + 360);
+            } else if (targetAngle - angle < -180) {
+                error = targetAngle - (angle - 360);
+            } else {
+                error = targetAngle - angle;
+            }
+
+            /*if (targetAngle > 90 && angle < -90) {
+                error = targetAngle - (angle + 360);
+            } else {
+                error = targetAngle - angle;
+            }*/
+            double correction = controller.calculate(error); //controller.calculate(error);
+            double rightPower = correction * maxSpeed;
+            double leftPower  = -correction * maxSpeed;
+
+            double max = Math.max(Math.abs(rightPower), Math.abs(leftPower));
+            if (max > 1) { // clip the power between -1,1 while retaining relative speed percentage
+                rightPower = rightPower / max;
+                leftPower = leftPower / max;
+            }
+
+            telemetry.addData("error", error);
+            telemetry.addData("correction", correction);
+            telemetry.addData("rightPower", rightPower);
+            telemetry.addData("leftPower", leftPower);
+            telemetry.update();
+
+            wheel1.setPower(rightPower);
+            wheel4.setPower(rightPower);
+            wheel2.setPower(leftPower);
+            wheel3.setPower(leftPower);
+        }
+
+        wheel1.setPower(0);
+        wheel4.setPower(0);
+        wheel2.setPower(0);
+        wheel3.setPower(0);
+    }
+
+    private void gyroTurnfail(double targetAngle, double desiredPower, double distance, double timeout) {
+        //PController controller = new PController(DRIVE_kP);
+
+        //distance = distance * TICKS_PER_INCH;
+
+        wheel1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        wheel2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        wheel3.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        wheel4.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        double rightStart = bot.wheel1.getCurrentPosition(); // top right
+        double leftStart = bot.wheel2.getCurrentPosition(); // top left
+
+        double startTime = time;
+
+        Orientation orientation = bot.imu.getAngularOrientation(AxesReference.EXTRINSIC, AxesOrder.XYZ, AngleUnit.DEGREES);
+        double angle = orientation.thirdAngle;
+
+        while (opModeIsActive() && angle != targetAngle) {
+            if (time > startTime + timeout) { // timeout
+                telemetry.addLine("Drive loop timeout.");
+                break;
+            }
+
+
+
+            //telemetry.addData("kP", controller.getkP());
+            //telemetry.addData("rightEncoder", bot.wheel1.getCurrentPosition());
+            //telemetry.addData("distance", distance);
+            //telemetry.addData("Current angle:", orientation.thirdAngle);
+            telemetry.update();
+            wheel1.setPower(-desiredPower);
+            wheel4.setPower(-desiredPower);
+            wheel2.setPower(desiredPower);
+            wheel3.setPower(desiredPower);
+        }
+
+        wheel1.setPower(0);
+        wheel4.setPower(0);
+        wheel2.setPower(0);
+        wheel3.setPower(0);
+    }
+
+    private void gyroDriveServo(double targetAngle, double desiredPower, double distance, double timeout) {
+        PController controller = new PController(DRIVE_kP);
+
+        distance = distance * TICKS_PER_INCH;
+
+        wheel1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        wheel2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        wheel3.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        wheel4.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        double rightStart = bot.wheel1.getCurrentPosition(); // top right
+        double leftStart = bot.wheel2.getCurrentPosition(); // top left
+
+        double startTime = time;
+
+        while (opModeIsActive() && Math.abs(wheel1.getCurrentPosition() - rightStart) < distance && Math.abs(wheel2.getCurrentPosition() - leftStart) < distance) {
+            if (time > startTime + timeout) { // timeout
+                telemetry.addLine("Drive loop timeout.");
+                break;
+            }
+
+            if (time - 2 == startTime){
+                bot.pusher.setPosition(0.5);
             }
 
             Orientation orientation = bot.imu.getAngularOrientation(AxesReference.EXTRINSIC, AxesOrder.XYZ, AngleUnit.DEGREES);
@@ -312,8 +379,7 @@ public class FullCraterOld extends LinearOpMode {
             //telemetry.addData("distance", distance);
             //telemetry.addData("Current angle:", orientation.thirdAngle);
             telemetry.update();
-            wheel1.setPower(rightPower);
-            wheel4.setPower(rightPower);
+            wheel1.setPower(rightPower);            wheel4.setPower(rightPower);
             wheel2.setPower(leftPower);
             wheel3.setPower(leftPower);
         }
@@ -322,12 +388,13 @@ public class FullCraterOld extends LinearOpMode {
         wheel4.setPower(0);
         wheel2.setPower(0);
         wheel3.setPower(0);
+        bot.pusher.setPosition(0.5);
     }
 
     private void gyroDirectionalDrive(double direction, double power, double distance, boolean turn, double timeout) {
         MecanumDrivetrain drivetrain = bot.drivetrain;
 
-        PController controller = new PController(1.0/20);
+        PController controller = new PController(1.0/20.0);
 
         distance = distance * TICKS_PER_INCH;
 
@@ -380,10 +447,68 @@ public class FullCraterOld extends LinearOpMode {
         wheel3.setPower(0);
     }
 
+    public boolean isActive() { // safe cleanup
+        if (!opModeIsActive()) {
+            //detector.disable();
+            return false;
+        } else {
+            return true;
+        }
+    }
+
     public void gyroHold(double holdTime) {
         double startTime = time;
-        while (opModeIsActive() && time - startTime < holdTime) {
+        while (isActive() && time - startTime < holdTime) {
             Thread.yield();
+        }
+    }
+
+    public void gyroStrafe(double speed, int direction, double distance, double timeout) {
+
+        distance = distance * TICKS_PER_INCH;
+
+        double rightStart = bot.wheel2.getCurrentPosition(); // top right
+        double leftStart = bot.wheel1.getCurrentPosition(); // top left
+
+        double startTime = time;
+
+        if (direction == 0) {
+            //Strafe left
+            while (isActive() && Math.abs(wheel1.getCurrentPosition() - leftStart) < distance) {
+
+                if (time > startTime + timeout) { // timeout
+                    telemetry.addLine("Drive loop timeout.");
+                    break;
+                }
+
+                wheel1.setPower(speed);
+                wheel2.setPower(-speed);
+                wheel3.setPower(speed);
+                wheel4.setPower(-speed);
+            }
+            wheel1.setPower(0);
+            wheel2.setPower(0);
+            wheel3.setPower(0);
+            wheel4.setPower(0);
+        }
+
+        if (direction == 1) {
+            //Strafe right
+            while (isActive() && Math.abs(wheel2.getCurrentPosition() - rightStart) < distance) {
+                if (time > startTime + timeout) { // timeout
+                    telemetry.addLine("Drive loop timeout.");
+                    break;
+                }
+
+                wheel1.setPower(-speed);
+                wheel2.setPower(speed);
+                wheel3.setPower(-speed);
+                wheel4.setPower(speed);
+            }
+            wheel1.setPower(0);
+            wheel2.setPower(0);
+            wheel3.setPower(0);
+            wheel4.setPower(0);
         }
     }
 
@@ -403,7 +528,7 @@ public class FullCraterOld extends LinearOpMode {
 
         power = Range.clip(-power, -1, 1);
         // Start the loop. Even if we're going backwards, math.abs makes sure that we can still compare to distance.
-        while (opModeIsActive() && (Math.abs(wheel2.getCurrentPosition() -startRPos) < distance) && (Math.abs(wheel1.getCurrentPosition() -startLPos) < distance)) {
+        while (isActive() && (Math.abs(wheel2.getCurrentPosition() -startRPos) < distance) && (Math.abs(wheel1.getCurrentPosition() -startLPos) < distance)) {
             if (time > startTime + timeout) {
                 telemetry.addData("Last drive stop:", "Timeout!");
                 break;
@@ -450,14 +575,16 @@ public class FullCraterOld extends LinearOpMode {
 
     private int getGoldSide() { // this will probably need work
         if (detector.getScreenPosition().x > 0 && detector.getScreenPosition().y > 300) {
-            double pos = detector.getXPosition();
+            double pos = detector.getScreenPosition().x;
+            detector.disable();
             if (pos <= 340) {
-                return 0; // left
+                return 1; // left
             } else {
-                return 1; // center
+                return 2; // center
             }
         } else {
-            return 2; // right/not found
+            detector.disable();
+            return 0; // RIGHT/not found
         }
     }
 

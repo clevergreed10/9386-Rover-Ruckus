@@ -37,12 +37,18 @@ public class TeleopMecanum extends OpMode {
     private double front_right, front_left, back_right, back_left;
     private double armPower, liftPower  = 0;
     private double winchPower, intakePower = 0;
+    private double WHEEL_DAMP = 1.0;
     private double desiredArmPos = 0;
+
+    private int SPOOL_SCORE_POS;
+    private int SPOOL_START_POS;
 
     private Button pad2A = new Button();
     private Button pad2B = new Button();
     private Button pad2X = new Button();
     private Button pad2Y = new Button();
+
+    private Button pad1Y = new Button();
 
 
     private Button leftBump2 = new Button();
@@ -75,9 +81,19 @@ public class TeleopMecanum extends OpMode {
         forward = -gamepad1.left_stick_y;
 
         if (gamepad1.left_trigger > 0.1 || gamepad1.right_trigger > 0.1) {
-            strafe = gamepad1.left_trigger + gamepad1.right_trigger;
+            strafe = -gamepad1.left_trigger + gamepad1.right_trigger;
         } else {
             strafe = gamepad1.left_stick_x;
+        }
+
+        pad1Y.update(gamepad1.y);
+
+        if (pad1Y.isToggle()) {
+            if (WHEEL_DAMP == 0.6) {
+                WHEEL_DAMP = 1.0;
+            } else {
+                WHEEL_DAMP = 0.6;
+            }
         }
 
         rotate  = kR * gamepad1.right_stick_x;
@@ -99,10 +115,10 @@ public class TeleopMecanum extends OpMode {
             back_right  /= max;
         }
 
-        robot.wheel1.setPower(front_right);
-        robot.wheel2.setPower(front_left);
-        robot.wheel3.setPower(back_left);
-        robot.wheel4.setPower(back_right);
+        robot.wheel1.setPower(front_right * WHEEL_DAMP);
+        robot.wheel2.setPower(front_left * WHEEL_DAMP);
+        robot.wheel3.setPower(back_left * WHEEL_DAMP);
+        robot.wheel4.setPower(back_right * WHEEL_DAMP);
 
         // Scoring logic
         armPower = gamepad2.right_stick_y;
@@ -110,8 +126,9 @@ public class TeleopMecanum extends OpMode {
         //Set spool to scoring position
         if (gamepad2.a){
             robot.winch.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            robot.winch.setTargetPosition(-1346);
-            if (robot.winch.getCurrentPosition() < -1346){
+            robot.winch.setTargetPosition(SPOOL_SCORE_POS);
+            /*
+             if (robot.winch.getCurrentPosition() < robot.winch.getTargetPosition()){
                 robot.winch.setPower(1);
             }
             else if (robot.winch.getCurrentPosition() > -1346){
@@ -120,16 +137,22 @@ public class TeleopMecanum extends OpMode {
             else{
                 robot.winch.setPower(0);
             }
-        }
-        if (gamepad2.b){
+             */
+        } else if (gamepad2.b){
             robot.winch.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
             robot.winch.setPower(0);
-        }
-        if (gamepad2.x){
+        } else if (gamepad2.x){
             robot.winch.setPower(0);
             robot.winch.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
             robot.winch.setPower(0);
             robot.winch.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        }
+
+        if (gamepad2.dpad_right) {
+            // spool scoring position
+            SPOOL_SCORE_POS = robot.winch.getCurrentPosition();
+        } else if (gamepad2.dpad_left) {
+            SPOOL_START_POS = robot.winch.getCurrentPosition();
         }
 
         // find spool power
@@ -161,10 +184,18 @@ public class TeleopMecanum extends OpMode {
         }
 
         // Moves the Team Marker gear.
-        if (gamepad2.a) {
+        if (gamepad2.y) {
             robot.pusher.setPosition(0);
-        } else {
+        }
+        if (gamepad2.x){
             robot.pusher.setPosition(1);
+        }
+
+        if (gamepad1.dpad_left){
+            robot.stopper.setPosition(1);
+        }
+        if (gamepad1.dpad_right){
+            robot.stopper.setPosition(0);
         }
 
         //Robot Lift
@@ -185,11 +216,11 @@ public class TeleopMecanum extends OpMode {
         telemetry.addData("Lift Value: ", liftPower);
         telemetry.addData("Intake Value: ", intakePower);
         telemetry.addData("Winch Value: ", winchPower);
-        telemetry.addData("Winch Position: ", robot.winch.getCurrentPosition());
-        telemetry.addData("front_right Value: ", front_right);
-        telemetry.addData("front_left Value: ", front_left);
-        telemetry.addData("back_right Value: ", back_right);
-        telemetry.addData("back_left Value: ", back_left);
+        //telemetry.addData("Winch Position: ", robot.winch.getCurrentPosition());
+        //telemetry.addData("front_right Value: ", front_right);
+        //telemetry.addData("front_left Value: ", front_left);
+        //telemetry.addData("back_right Value: ", back_right);
+        //telemetry.addData("back_left Value: ", back_left);
         telemetry.update();
     }
 

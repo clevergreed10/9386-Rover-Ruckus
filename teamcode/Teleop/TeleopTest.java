@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
@@ -12,7 +13,7 @@ import org.firstinspires.ftc.teamcode.EEBotHardware;
 import org.firstinspires.ftc.teamcode.PIDControl.PIDController;
 import org.firstinspires.ftc.teamcode.Util.Gamepad.Button;
 
-@TeleOp(name="Teleop: Teleop Test", group="Robot")
+@TeleOp(name="Teleop: Arm Test", group="Robot")
 
 public class TeleopTest extends OpMode {
 
@@ -23,18 +24,20 @@ public class TeleopTest extends OpMode {
     private final double GEAR_RATIO = (12.0/86.0) * (28.0/86.0);
     private final double TICKS_PER_ARM_DEGREE = ARM_MOTOR_TPR/(GEAR_RATIO * 360.0);
 
-    private static double MAX_ARM_POWER = 1;
+    private static double MAX_ARM_POWER = 1.0;
+    private static double MAX_ARM_CHANGE = 0.2;
     private double leftPower, rightPower = 0;
-    private double armTarget, armPosition;
+    private int armTarget, armPosition;
 
     private DcMotor armMotor;
 
-    private double armPreset1;
-    private double armPreset2;
+    private int armPreset1;
+    private int armPreset2;
+    private double prevArmPower;
 
-    private double kP = 1.0/20.0; // Remember to ensure division by doubles.
+    private double kP = 1.0/30.0; // Remember to ensure division by doubles.
     private double kI = 0;
-    private double kD = 1.0/20.0;
+    private double kD = 0;
     private PIDController armController = new PIDController(kP, kI, kD);
 
     @Override // @Override tells the computer we intend to override OpMode's method init()
@@ -50,15 +53,8 @@ public class TeleopTest extends OpMode {
 
     @Override
     public void loop() {
-        // Arm logic
-
-        //armTarget   = 1200;
-
-
-        //double armPower = armController.calculate(armTarget - armPosition);
-
+        // spool logic
         double winchPower;
-        double armPower = gamepad2.right_stick_y;
 
         // find spool power
         if (gamepad2.right_trigger > 0.1) {
@@ -68,32 +64,41 @@ public class TeleopTest extends OpMode {
         } else {
             winchPower = 0;
         }
-        // set armTarget
-
-        if (gamepad2.left_stick_y > 0.1) {
-            armTarget++;
-        } else if (gamepad2.left_stick_y < -0.1) {
-            armTarget++;
-        }
 
         // CONCEPT
-        armPosition = armMotor.getCurrentPosition();
-        double armDegreeError = armTarget - armPosition/TICKS_PER_ARM_DEGREE;
-        //armPower = armController.calculate(armDegreeError);*/
 
         if (gamepad2.x) {
             armTarget = armPreset1;
         } else if (gamepad2.y) {
             armTarget = armPreset2;
+        } else {
+            armTarget = armTarget - round(gamepad2.left_stick_y * 20);
         }
+
+        if (gamepad2.dpad_left) {
+            armPreset1 = armMotor.getCurrentPosition();
+        } else if (gamepad2.dpad_right) {
+            armPreset2 = armMotor.getCurrentPosition();
+        }
+
+        armPosition = armMotor.getCurrentPosition();
+        double armErr = armTarget - armPosition;
+        double armDegreeError = armTarget - armPosition/TICKS_PER_ARM_DEGREE;
+        double armPower = Range.clip(armController.calculate(armErr) - prevArmPower, -MAX_ARM_CHANGE, MAX_ARM_CHANGE);
+        prevArmPower = armPower;
 
         armMotor.setPower(armPower);
         robot.winch.setPower(winchPower);
+
         telemetry.addData("ArmPosition", armPosition);
         telemetry.addData("ArmTarget:", armTarget);
-        telemetry.addData("Error:", armDegreeError);
+        telemetry.addData("AngleError:", armDegreeError);
+        telemetry.addData("ArmPower", armPower);
         telemetry.update();
+    }
 
+    private int round(double num) {
+        return (int) Math.round(num);
     }
 
     private double getMotorPower(double stick) {
@@ -101,5 +106,4 @@ public class TeleopTest extends OpMode {
         double finalPower = -1 * Math.sin(stick*Math.PI/2); // sin(pi*x/2) >>> period 2, [-1,1]
         return finalPower;
     }
-
 }
