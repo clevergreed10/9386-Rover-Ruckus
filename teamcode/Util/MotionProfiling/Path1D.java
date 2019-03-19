@@ -1,8 +1,9 @@
 package org.firstinspires.ftc.teamcode.Util.MotionProfiling;
 
 // Base class for 1-dimensional motion paths
-public abstract class Path1D{
-    double start, end;
+public class Path1D{
+    double start;
+    double end;
 
     public Path1D(double endTime) {
         this(0.0, endTime);
@@ -12,6 +13,4 @@ public abstract class Path1D{
         this.start = startTime;
         this.end   = endTime;
     }
-
-    public abstract double getPointOnPath(double time);
 }
