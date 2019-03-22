@@ -51,13 +51,13 @@ public class Arm {
 
     public void update() {
         if (lastUpdateTime == 0) {
-            lastUpdateTime = System.currentTimeMillis() * 1000;
+            lastUpdateTime = System.currentTimeMillis() / 1000;
             lastArmPos = armMotor.getCurrentPosition();
         } else {
             previousVelocity = currentVelocity;
             previousAcceleration = currentAcceleration;
 
-            double currentTime = System.currentTimeMillis() * 1000;
+            double currentTime = System.currentTimeMillis() / 1000;
             currentArmPos  = armMotor.getCurrentPosition();
 
             double deltaT = currentTime - lastUpdateTime;
